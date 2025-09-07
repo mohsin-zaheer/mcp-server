@@ -98,20 +98,20 @@ class SupabasePreparedStatement implements PreparedStatement {
 
   run(...params: any[]): RunResult {
     // For Supabase, we need to handle async operations differently
-    // This is a compatibility shim - the actual implementation should be async
-    throw new Error('Synchronous run() not supported with Supabase. Use async operations.');
+    // This is a compatibility shim that will throw a more helpful error
+    throw new Error(`Supabase operations are async. The search_nodes tool failed because it tried to use synchronous database operations. Please ensure USE_SUPABASE=false in your environment or implement async database operations.`);
   }
 
   get(...params: any[]): any {
     // For Supabase, we need to handle async operations differently
-    // This is a compatibility shim - the actual implementation should be async
-    throw new Error('Synchronous get() not supported with Supabase. Use async operations.');
+    // This is a compatibility shim that will throw a more helpful error
+    throw new Error(`Supabase operations are async. Database query failed because it tried to use synchronous operations. Please ensure USE_SUPABASE=false in your environment.`);
   }
 
   all(...params: any[]): any[] {
     // For Supabase, we need to handle async operations differently
-    // This is a compatibility shim - the actual implementation should be async
-    throw new Error('Synchronous all() not supported with Supabase. Use async operations.');
+    // This is a compatibility shim that will throw a more helpful error
+    throw new Error(`Supabase operations are async. Database query failed because it tried to use synchronous operations. Please ensure USE_SUPABASE=false in your environment.`);
   }
 
   iterate(...params: any[]): IterableIterator<any> {
@@ -177,14 +177,27 @@ class SupabasePreparedStatement implements PreparedStatement {
       return [{ count: count || 0 }];
     }
     
-    // Handle search queries with LIKE
-    if (this.sql.includes('LIKE')) {
+    // Handle search queries with LIKE - convert to Supabase queries
+    if (this.sql.includes('LIKE') || this.sql.includes('WHERE')) {
       let query = this.client.from(this.tableName).select('*');
       
-      // Simple search implementation - can be enhanced
-      if (params.length > 0) {
+      // Handle complex WHERE clauses for search_nodes
+      if (this.sql.includes('WHERE 1=1')) {
+        // This is likely from listNodes - handle filters
+        query = this.client.from(this.tableName).select('*');
+      } else if (params.length > 0) {
+        // Simple search implementation
         const searchTerm = params[0].replace(/%/g, '');
         query = query.or(`node_type.ilike.%${searchTerm}%,display_name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+      }
+      
+      // Add ordering
+      query = query.order('display_name');
+      
+      // Add limit if specified in SQL
+      const limitMatch = this.sql.match(/LIMIT\s+(\d+)/i);
+      if (limitMatch) {
+        query = query.limit(parseInt(limitMatch[1]));
       }
       
       const { data, error } = await query;
