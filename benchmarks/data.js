@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1757278474144,
+  "lastUpdate": 1757279797083,
   "repoUrl": "https://github.com/mohsin-zaheer/mcp-server",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -104,6 +104,58 @@ window.BENCHMARK_DATA = {
             "range": "0.2912",
             "unit": "ms",
             "extra": "15198 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mohsinzaheerbabar@gmail.com",
+            "name": "Mohsin Zaheer",
+            "username": "mohsin-zaheer"
+          },
+          "committer": {
+            "email": "mohsinzaheerbabar@gmail.com",
+            "name": "Mohsin Zaheer",
+            "username": "mohsin-zaheer"
+          },
+          "distinct": true,
+          "id": "b42d4c583b72a05b3847f729fbaf1c7203c40ba6",
+          "message": "update",
+          "timestamp": "2025-09-08T02:14:38+05:00",
+          "tree_id": "cd06706355de16d2fa081be37c604e67fe3da663",
+          "url": "https://github.com/mohsin-zaheer/mcp-server/commit/b42d4c583b72a05b3847f729fbaf1c7203c40ba6"
+        },
+        "date": 1757279796808,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0188,
+            "range": "0.23819999999999997",
+            "unit": "ms",
+            "extra": "53273 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.1336,
+            "range": "0.4424999999999999",
+            "unit": "ms",
+            "extra": "319 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0047,
+            "range": "0.2695",
+            "unit": "ms",
+            "extra": "212465 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0657,
+            "range": "0.3221",
+            "unit": "ms",
+            "extra": "15214 ops/sec"
           }
         ]
       }
