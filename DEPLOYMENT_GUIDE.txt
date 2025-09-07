@@ -103,7 +103,7 @@ AUTH_TOKEN=your-secure-32-character-token-here
 # Server configuration
 MCP_MODE=http
 USE_FIXED_HTTP=true
-PORT=3000
+PORT=3001
 NODE_ENV=production
 LOG_LEVEL=info
 
@@ -134,7 +134,7 @@ docker-compose up -d
 docker-compose logs -f n8n-mcp
 
 # Check health
-curl -H "Authorization: Bearer your-token-here" http://localhost:3000/health
+curl -H "Authorization: Bearer your-token-here" http://localhost:3001/health
 
 # Test the n8n-mcp wrapper command (Docker-specific)
 docker exec n8n-mcp n8n-mcp serve --help
@@ -160,7 +160,7 @@ docker volume create n8n-mcp-data
 docker run -d \
   --name n8n-mcp \
   --restart unless-stopped \
-  -p 3000:3000 \
+  -p 3001:3001 \
   -v n8n-mcp-data:/app/data \
   -e AUTH_TOKEN="your-secure-token-here" \
   -e MCP_MODE=http \
@@ -210,7 +210,7 @@ cat > /opt/n8n-mcp/.env << 'EOF'
 NODE_ENV=production
 MCP_MODE=http
 USE_FIXED_HTTP=true
-PORT=3000
+PORT=3001
 HOST=0.0.0.0
 AUTH_TOKEN=your-secure-token-here
 LOG_LEVEL=info
@@ -288,7 +288,7 @@ server {
     limit_req zone=api burst=20 nodelay;
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -417,7 +417,7 @@ docker-compose up -d
 # Solution: Verify AUTH_TOKEN is set correctly
 echo $AUTH_TOKEN
 # Test with curl:
-curl -H "Authorization: Bearer $AUTH_TOKEN" http://localhost:3000/health
+curl -H "Authorization: Bearer $AUTH_TOKEN" http://localhost:3001/health
 ```
 
 #### 5. Port Already in Use
@@ -433,7 +433,7 @@ lsof -ti:3000 | xargs kill -9
 #### Basic Health Check
 ```bash
 # For HTTP mode
-curl -H "Authorization: Bearer your-token" http://localhost:3000/health
+curl -H "Authorization: Bearer your-token" http://localhost:3001/health
 
 # Expected response: {"status":"ok","timestamp":"..."}
 ```
@@ -566,7 +566,7 @@ Add to your Claude Desktop config:
 ### HTTP Client Integration
 ```javascript
 // Example HTTP client usage
-const response = await fetch('http://localhost:3000/mcp', {
+const response = await fetch('http://localhost:3001/mcp', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
