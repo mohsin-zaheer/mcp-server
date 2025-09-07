@@ -76,8 +76,8 @@ export class NodeRepository {
    */
   async getNodeAsync(nodeType: string): Promise<any> {
     if (this.isSupabase) {
-      const stmt = this.db.prepare(`SELECT * FROM nodes WHERE node_type = ?`);
-      const row = await (stmt as any).get(nodeType);
+      const stmt = this.db.prepare(`SELECT * FROM nodes WHERE node_type = ?`) as any;
+      const row = await stmt.getAsync(nodeType);
       
       if (!row) return null;
       return this.parseNodeRow(row);
@@ -141,8 +141,8 @@ export class NodeRepository {
         FROM nodes 
         WHERE is_ai_tool = 1
         ORDER BY display_name
-      `);
-      const rows = await (stmt as any).all();
+      `) as any;
+      const rows = await stmt.allAsync();
       
       return rows.map((row: any) => ({
         nodeType: row.node_type,
@@ -284,25 +284,4 @@ export class NodeRepository {
     return results;
   }
 
-  private parseNodeRow(row: any): any {
-    return {
-      nodeType: row.node_type,
-      displayName: row.display_name,
-      description: row.description,
-      category: row.category,
-      developmentStyle: row.development_style,
-      package: row.package_name,
-      isAITool: Number(row.is_ai_tool) === 1,
-      isTrigger: Number(row.is_trigger) === 1,
-      isWebhook: Number(row.is_webhook) === 1,
-      isVersioned: Number(row.is_versioned) === 1,
-      version: row.version,
-      properties: this.safeJsonParse(row.properties_schema, []),
-      operations: this.safeJsonParse(row.operations, []),
-      credentials: this.safeJsonParse(row.credentials_required, []),
-      hasDocumentation: !!row.documentation,
-      outputs: row.outputs ? this.safeJsonParse(row.outputs, null) : null,
-      outputNames: row.output_names ? this.safeJsonParse(row.output_names, null) : null
-    };
-  }
 }

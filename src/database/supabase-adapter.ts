@@ -14,7 +14,7 @@ export class SupabaseAdapter implements DatabaseAdapter {
   }
 
   prepare(sql: string): PreparedStatement {
-    return new SupabasePreparedStatement(this.client, sql);
+    return new SupabasePreparedStatement(this.client, sql) as any;
   }
 
   exec(sql: string): void {
@@ -96,61 +96,21 @@ class SupabasePreparedStatement implements PreparedStatement {
     return 'UNKNOWN';
   }
 
-  async run(...params: any[]): Promise<RunResult> {
-    try {
-      switch (this.operation) {
-        case 'INSERT':
-          return this.handleInsert(params);
-        case 'UPDATE':
-          return this.handleUpdate(params);
-        case 'DELETE':
-          return this.handleDelete(params);
-        default:
-          throw new Error(`Unsupported operation: ${this.operation}`);
-      }
-    } catch (error) {
-      logger.error('Supabase run error:', error);
-      throw error;
-    }
-  }
-
   run(...params: any[]): RunResult {
-    // Synchronous version - we'll need to handle this differently
+    // For Supabase, we need to handle async operations differently
+    // This is a compatibility shim - the actual implementation should be async
     throw new Error('Synchronous run() not supported with Supabase. Use async operations.');
   }
 
-  async get(...params: any[]): Promise<any> {
-    try {
-      if (this.operation === 'SELECT') {
-        const result = await this.handleSelect(params, true);
-        return result.length > 0 ? result[0] : undefined;
-      }
-      throw new Error(`get() not supported for operation: ${this.operation}`);
-    } catch (error) {
-      logger.error('Supabase get error:', error);
-      throw error;
-    }
-  }
-
   get(...params: any[]): any {
-    // Synchronous version - we'll need to handle this differently
+    // For Supabase, we need to handle async operations differently
+    // This is a compatibility shim - the actual implementation should be async
     throw new Error('Synchronous get() not supported with Supabase. Use async operations.');
   }
 
-  async all(...params: any[]): Promise<any[]> {
-    try {
-      if (this.operation === 'SELECT') {
-        return this.handleSelect(params, false);
-      }
-      throw new Error(`all() not supported for operation: ${this.operation}`);
-    } catch (error) {
-      logger.error('Supabase all error:', error);
-      throw error;
-    }
-  }
-
   all(...params: any[]): any[] {
-    // Synchronous version - we'll need to handle this differently
+    // For Supabase, we need to handle async operations differently
+    // This is a compatibility shim - the actual implementation should be async
     throw new Error('Synchronous all() not supported with Supabase. Use async operations.');
   }
 
@@ -247,6 +207,49 @@ class SupabasePreparedStatement implements PreparedStatement {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
+  }
+
+  async runAsync(...params: any[]): Promise<RunResult> {
+    try {
+      switch (this.operation) {
+        case 'INSERT':
+          return this.handleInsert(params);
+        case 'UPDATE':
+          return this.handleUpdate(params);
+        case 'DELETE':
+          return this.handleDelete(params);
+        default:
+          throw new Error(`Unsupported operation: ${this.operation}`);
+      }
+    } catch (error) {
+      logger.error('Supabase run error:', error);
+      throw error;
+    }
+  }
+
+  async getAsync(...params: any[]): Promise<any> {
+    try {
+      if (this.operation === 'SELECT') {
+        const result = await this.handleSelect(params, true);
+        return result.length > 0 ? result[0] : undefined;
+      }
+      throw new Error(`get() not supported for operation: ${this.operation}`);
+    } catch (error) {
+      logger.error('Supabase get error:', error);
+      throw error;
+    }
+  }
+
+  async allAsync(...params: any[]): Promise<any[]> {
+    try {
+      if (this.operation === 'SELECT') {
+        return this.handleSelect(params, false);
+      }
+      throw new Error(`all() not supported for operation: ${this.operation}`);
+    } catch (error) {
+      logger.error('Supabase all error:', error);
+      throw error;
+    }
   }
 
   private async handleInsert(params: any[]): Promise<RunResult> {

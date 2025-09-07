@@ -60,7 +60,7 @@ export async function createDatabaseAdapter(dbPath: string): Promise<DatabaseAda
     }
     
     const { createSupabaseAdapter } = await import('./supabase-adapter');
-    return createSupabaseAdapter(supabaseUrl, supabaseKey);
+    return await createSupabaseAdapter(supabaseUrl, supabaseKey);
   }
   // Log Node.js version information
   // Only log in non-stdio mode
