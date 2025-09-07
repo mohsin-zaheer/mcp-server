@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1757279797083,
+  "lastUpdate": 1757280294904,
   "repoUrl": "https://github.com/mohsin-zaheer/mcp-server",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -156,6 +156,58 @@ window.BENCHMARK_DATA = {
             "range": "0.3221",
             "unit": "ms",
             "extra": "15214 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mohsinzaheerbabar@gmail.com",
+            "name": "Mohsin Zaheer",
+            "username": "mohsin-zaheer"
+          },
+          "committer": {
+            "email": "mohsinzaheerbabar@gmail.com",
+            "name": "Mohsin Zaheer",
+            "username": "mohsin-zaheer"
+          },
+          "distinct": true,
+          "id": "c10fdfa9dca7d6b8fa787db0556806b1a5a63f9a",
+          "message": "feat: add async initialize method to TemplateRepository\n\nCo-authored-by: aider (anthropic/claude-sonnet-4-20250514) <aider@aider.chat>",
+          "timestamp": "2025-09-08T02:22:40+05:00",
+          "tree_id": "78eb5f44d843533d320421efd08f17aeae394313",
+          "url": "https://github.com/mohsin-zaheer/mcp-server/commit/c10fdfa9dca7d6b8fa787db0556806b1a5a63f9a"
+        },
+        "date": 1757280294631,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.019,
+            "range": "0.26970000000000005",
+            "unit": "ms",
+            "extra": "52639 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.1867,
+            "range": "1.2592999999999996",
+            "unit": "ms",
+            "extra": "314 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0048,
+            "range": "0.268",
+            "unit": "ms",
+            "extra": "209464 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0663,
+            "range": "0.3518",
+            "unit": "ms",
+            "extra": "15094 ops/sec"
           }
         ]
       }
