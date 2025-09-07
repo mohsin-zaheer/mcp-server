@@ -43,76 +43,25 @@ export interface ColumnDefinition {
 
 /**
  * Factory function to create a database adapter
- * Supports SQLite (better-sqlite3, sql.js) and Supabase
+ * Uses Supabase as the primary database backend
  */
 export async function createDatabaseAdapter(dbPath: string): Promise<DatabaseAdapter> {
-  // Check if we should use Supabase
-  if (process.env.USE_SUPABASE === 'true') {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_ANON_KEY;
-    
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required when USE_SUPABASE=true');
-    }
-    
-    if (process.env.MCP_MODE !== 'stdio') {
-      logger.info('Using Supabase as database backend');
-    }
-    
-    const { createSupabaseAdapter } = await import('./supabase-adapter');
-    return await createSupabaseAdapter(supabaseUrl, supabaseKey);
-  }
-  // Log Node.js version information
-  // Only log in non-stdio mode
-  if (process.env.MCP_MODE !== 'stdio') {
-    logger.info(`Node.js version: ${process.version}`);
-  }
-  // Only log in non-stdio mode
-  if (process.env.MCP_MODE !== 'stdio') {
-    logger.info(`Platform: ${process.platform} ${process.arch}`);
+  // Force Supabase usage
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required. This application requires Supabase as the database backend.');
   }
   
-  // First, try to use better-sqlite3
-  try {
-    if (process.env.MCP_MODE !== 'stdio') {
-      logger.info('Attempting to use better-sqlite3...');
-    }
-    const adapter = await createBetterSQLiteAdapter(dbPath);
-    if (process.env.MCP_MODE !== 'stdio') {
-      logger.info('Successfully initialized better-sqlite3 adapter');
-    }
-    return adapter;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    
-    // Check if it's a version mismatch error
-    if (errorMessage.includes('NODE_MODULE_VERSION') || errorMessage.includes('was compiled against a different Node.js version')) {
-      if (process.env.MCP_MODE !== 'stdio') {
-        logger.warn(`Node.js version mismatch detected. Better-sqlite3 was compiled for a different Node.js version.`);
-      }
-      if (process.env.MCP_MODE !== 'stdio') {
-        logger.warn(`Current Node.js version: ${process.version}`);
-      }
-    }
-    
-    if (process.env.MCP_MODE !== 'stdio') {
-      logger.warn('Failed to initialize better-sqlite3, falling back to sql.js', error);
-    }
-    
-    // Fall back to sql.js
-    try {
-      const adapter = await createSQLJSAdapter(dbPath);
-      if (process.env.MCP_MODE !== 'stdio') {
-        logger.info('Successfully initialized sql.js adapter (pure JavaScript, no native dependencies)');
-      }
-      return adapter;
-    } catch (sqlJsError) {
-      if (process.env.MCP_MODE !== 'stdio') {
-        logger.error('Failed to initialize sql.js adapter', sqlJsError);
-      }
-      throw new Error('Failed to initialize any database adapter');
-    }
+  if (process.env.MCP_MODE !== 'stdio') {
+    logger.info('Using Supabase as database backend');
   }
+  
+  const { createSupabaseAdapter } = await import('./supabase-adapter');
+  return await createSupabaseAdapter(supabaseUrl, supabaseKey);
+  // This code path should never be reached since we're forcing Supabase
+  throw new Error('SQLite adapters are disabled. This application requires Supabase as the database backend.');
 }
 
 /**

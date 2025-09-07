@@ -13,8 +13,8 @@ export class NodeRepository {
       this.db = dbOrService;
     }
     
-    // Check if we're using Supabase
-    this.isSupabase = process.env.USE_SUPABASE === 'true';
+    // Force Supabase usage
+    this.isSupabase = true;
   }
   
   /**
@@ -56,19 +56,9 @@ export class NodeRepository {
    * Get node with proper JSON deserialization
    */
   getNode(nodeType: string): any {
-    if (this.isSupabase) {
-      // For Supabase, we need async operations
-      // This is a temporary sync wrapper - ideally the whole chain should be async
-      throw new Error('getNode() with Supabase requires async operations. Use getNodeAsync() instead.');
-    }
-    
-    const row = this.db.prepare(`
-      SELECT * FROM nodes WHERE node_type = ?
-    `).get(nodeType) as any;
-    
-    if (!row) return null;
-    
-    return this.parseNodeRow(row);
+    // For Supabase, we need async operations
+    // This is a temporary sync wrapper - ideally the whole chain should be async
+    throw new Error('getNode() with Supabase requires async operations. Use getNodeAsync() instead.');
   }
 
   /**
@@ -112,23 +102,7 @@ export class NodeRepository {
    * Get AI tools with proper filtering
    */
   getAITools(): any[] {
-    if (this.isSupabase) {
-      throw new Error('getAITools() with Supabase requires async operations. Use getAIToolsAsync() instead.');
-    }
-    
-    const rows = this.db.prepare(`
-      SELECT node_type, display_name, description, package_name
-      FROM nodes 
-      WHERE is_ai_tool = 1
-      ORDER BY display_name
-    `).all() as any[];
-    
-    return rows.map(row => ({
-      nodeType: row.node_type,
-      displayName: row.display_name,
-      description: row.description,
-      package: row.package_name
-    }));
+    throw new Error('getAITools() with Supabase requires async operations. Use getAIToolsAsync() instead.');
   }
 
   /**

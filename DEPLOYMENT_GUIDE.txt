@@ -88,11 +88,8 @@ ls -la data/nodes.db
 
 ## Database Setup
 
-### Option A: SQLite (Default)
-SQLite is the default database backend and requires no additional setup. The database file will be created automatically when you run `npm run rebuild`.
-
-### Option B: Supabase (Cloud Database)
-To use Supabase as your database backend:
+### Supabase Database Setup (Required)
+This application requires Supabase as the database backend:
 
 #### Step 1: Create Supabase Project
 1. Go to [supabase.com](https://supabase.com) and create a new project
@@ -319,11 +316,10 @@ sudo certbot renew --dry-run
 - `LOG_LEVEL`: Logging level (`debug`, `info`, `warn`, `error`)
 
 #### Database Configuration
-- `USE_SUPABASE`: Use Supabase as database backend (`true`/`false`)
-- `NODE_DB_PATH`: Path to SQLite database file (when USE_SUPABASE=false)
+- `USE_SUPABASE`: Use Supabase as database backend (always `true`)
+- `SUPABASE_URL`: Supabase project URL (required)
+- `SUPABASE_ANON_KEY`: Supabase anonymous key (required)
 - `REBUILD_ON_START`: Rebuild database on startup (`true`/`false`)
-- `SUPABASE_URL`: Supabase project URL (when USE_SUPABASE=true)
-- `SUPABASE_ANON_KEY`: Supabase anonymous key (when USE_SUPABASE=true)
 
 #### Security Configuration
 - `AUTH_TOKEN`: Required authentication token for HTTP mode

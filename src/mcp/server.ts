@@ -63,43 +63,8 @@ export class N8NDocumentationMCPServer {
   private clientInfo: any = null;
 
   constructor() {
-    // Check if we should use Supabase
-    if (process.env.USE_SUPABASE === 'true') {
-      // Initialize with Supabase
-      this.initialized = this.initializeDatabase('supabase');
-    } else {
-      // Check for test environment first
-      const envDbPath = process.env.NODE_DB_PATH;
-      let dbPath: string | null = null;
-      
-      let possiblePaths: string[] = [];
-      
-      if (envDbPath && (envDbPath === ':memory:' || existsSync(envDbPath))) {
-        dbPath = envDbPath;
-      } else {
-        // Try multiple database paths
-        possiblePaths = [
-          path.join(process.cwd(), 'data', 'nodes.db'),
-          path.join(__dirname, '../../data', 'nodes.db'),
-          './data/nodes.db'
-        ];
-        
-        for (const p of possiblePaths) {
-          if (existsSync(p)) {
-            dbPath = p;
-            break;
-          }
-        }
-      }
-      
-      if (!dbPath) {
-        logger.error('Database not found in any of the expected locations:', possiblePaths);
-        throw new Error('Database nodes.db not found. Please run npm run rebuild first.');
-      }
-      
-      // Initialize database asynchronously
-      this.initialized = this.initializeDatabase(dbPath);
-    }
+    // Force Supabase usage
+    this.initialized = this.initializeDatabase('supabase');
     
     logger.info('Initializing n8n Documentation MCP server');
     
@@ -130,22 +95,13 @@ export class N8NDocumentationMCPServer {
     try {
       this.db = await createDatabaseAdapter(dbPath);
       
-      // If using in-memory database for tests, initialize schema
-      if (dbPath === ':memory:') {
-        await this.initializeInMemorySchema();
-      }
-      
       this.repository = new NodeRepository(this.db);
       this.templateService = new TemplateService(this.db);
       
-      if (process.env.USE_SUPABASE === 'true') {
-        logger.info('Initialized Supabase database connection');
-      } else {
-        logger.info(`Initialized database from: ${dbPath}`);
-      }
+      logger.info('Initialized Supabase database connection');
     } catch (error) {
       logger.error('Failed to initialize database:', error);
-      throw new Error(`Failed to open database: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to connect to Supabase: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
   
