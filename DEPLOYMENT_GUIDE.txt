@@ -86,6 +86,74 @@ ls -la data/nodes.db
 
 ---
 
+## Database Setup
+
+### Option A: SQLite (Default)
+SQLite is the default database backend and requires no additional setup. The database file will be created automatically when you run `npm run rebuild`.
+
+### Option B: Supabase (Cloud Database)
+To use Supabase as your database backend:
+
+#### Step 1: Create Supabase Project
+1. Go to [supabase.com](https://supabase.com) and create a new project
+2. Note your project URL and anon key from the project settings
+
+#### Step 2: Create Database Schema
+Run this SQL in your Supabase SQL editor:
+
+```sql
+-- Create nodes table
+CREATE TABLE nodes (
+  node_type TEXT PRIMARY KEY,
+  package_name TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  description TEXT,
+  category TEXT,
+  development_style TEXT CHECK(development_style IN ('declarative', 'programmatic')),
+  is_ai_tool BOOLEAN DEFAULT FALSE,
+  is_trigger BOOLEAN DEFAULT FALSE,
+  is_webhook BOOLEAN DEFAULT FALSE,
+  is_versioned BOOLEAN DEFAULT FALSE,
+  version TEXT,
+  documentation TEXT,
+  properties_schema JSONB,
+  operations JSONB,
+  credentials_required JSONB,
+  outputs JSONB,
+  output_names JSONB,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes
+CREATE INDEX idx_nodes_package ON nodes(package_name);
+CREATE INDEX idx_nodes_ai_tool ON nodes(is_ai_tool);
+CREATE INDEX idx_nodes_category ON nodes(category);
+
+-- Enable Row Level Security (optional but recommended)
+ALTER TABLE nodes ENABLE ROW LEVEL SECURITY;
+
+-- Create policy to allow all operations (adjust as needed)
+CREATE POLICY "Allow all operations on nodes" ON nodes
+  FOR ALL USING (true);
+```
+
+#### Step 3: Configure Environment
+```bash
+# Set Supabase as database backend
+USE_SUPABASE=true
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+#### Step 4: Populate Database
+```bash
+# Build and populate the database
+npm run build
+npm run rebuild
+```
+
+---
+
 ## Production Deployment
 
 ### Step 1: Server Preparation
@@ -251,8 +319,11 @@ sudo certbot renew --dry-run
 - `LOG_LEVEL`: Logging level (`debug`, `info`, `warn`, `error`)
 
 #### Database Configuration
-- `NODE_DB_PATH`: Path to SQLite database file
+- `USE_SUPABASE`: Use Supabase as database backend (`true`/`false`)
+- `NODE_DB_PATH`: Path to SQLite database file (when USE_SUPABASE=false)
 - `REBUILD_ON_START`: Rebuild database on startup (`true`/`false`)
+- `SUPABASE_URL`: Supabase project URL (when USE_SUPABASE=true)
+- `SUPABASE_ANON_KEY`: Supabase anonymous key (when USE_SUPABASE=true)
 
 #### Security Configuration
 - `AUTH_TOKEN`: Required authentication token for HTTP mode

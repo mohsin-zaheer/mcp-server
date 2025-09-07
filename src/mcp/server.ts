@@ -63,37 +63,43 @@ export class N8NDocumentationMCPServer {
   private clientInfo: any = null;
 
   constructor() {
-    // Check for test environment first
-    const envDbPath = process.env.NODE_DB_PATH;
-    let dbPath: string | null = null;
-    
-    let possiblePaths: string[] = [];
-    
-    if (envDbPath && (envDbPath === ':memory:' || existsSync(envDbPath))) {
-      dbPath = envDbPath;
+    // Check if we should use Supabase
+    if (process.env.USE_SUPABASE === 'true') {
+      // Initialize with Supabase
+      this.initialized = this.initializeDatabase('supabase');
     } else {
-      // Try multiple database paths
-      possiblePaths = [
-        path.join(process.cwd(), 'data', 'nodes.db'),
-        path.join(__dirname, '../../data', 'nodes.db'),
-        './data/nodes.db'
-      ];
+      // Check for test environment first
+      const envDbPath = process.env.NODE_DB_PATH;
+      let dbPath: string | null = null;
       
-      for (const p of possiblePaths) {
-        if (existsSync(p)) {
-          dbPath = p;
-          break;
+      let possiblePaths: string[] = [];
+      
+      if (envDbPath && (envDbPath === ':memory:' || existsSync(envDbPath))) {
+        dbPath = envDbPath;
+      } else {
+        // Try multiple database paths
+        possiblePaths = [
+          path.join(process.cwd(), 'data', 'nodes.db'),
+          path.join(__dirname, '../../data', 'nodes.db'),
+          './data/nodes.db'
+        ];
+        
+        for (const p of possiblePaths) {
+          if (existsSync(p)) {
+            dbPath = p;
+            break;
+          }
         }
       }
+      
+      if (!dbPath) {
+        logger.error('Database not found in any of the expected locations:', possiblePaths);
+        throw new Error('Database nodes.db not found. Please run npm run rebuild first.');
+      }
+      
+      // Initialize database asynchronously
+      this.initialized = this.initializeDatabase(dbPath);
     }
-    
-    if (!dbPath) {
-      logger.error('Database not found in any of the expected locations:', possiblePaths);
-      throw new Error('Database nodes.db not found. Please run npm run rebuild first.');
-    }
-    
-    // Initialize database asynchronously
-    this.initialized = this.initializeDatabase(dbPath);
     
     logger.info('Initializing n8n Documentation MCP server');
     
@@ -131,7 +137,12 @@ export class N8NDocumentationMCPServer {
       
       this.repository = new NodeRepository(this.db);
       this.templateService = new TemplateService(this.db);
-      logger.info(`Initialized database from: ${dbPath}`);
+      
+      if (process.env.USE_SUPABASE === 'true') {
+        logger.info('Initialized Supabase database connection');
+      } else {
+        logger.info(`Initialized database from: ${dbPath}`);
+      }
     } catch (error) {
       logger.error('Failed to initialize database:', error);
       throw new Error(`Failed to open database: ${error instanceof Error ? error.message : 'Unknown error'}`);

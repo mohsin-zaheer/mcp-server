@@ -4,6 +4,7 @@ import { SQLiteStorageService } from '../services/sqlite-storage-service';
 
 export class NodeRepository {
   private db: DatabaseAdapter;
+  private isSupabase: boolean;
   
   constructor(dbOrService: DatabaseAdapter | SQLiteStorageService) {
     if ('db' in dbOrService) {
@@ -11,6 +12,9 @@ export class NodeRepository {
     } else {
       this.db = dbOrService;
     }
+    
+    // Check if we're using Supabase
+    this.isSupabase = process.env.USE_SUPABASE === 'true';
   }
   
   /**
@@ -52,12 +56,37 @@ export class NodeRepository {
    * Get node with proper JSON deserialization
    */
   getNode(nodeType: string): any {
+    if (this.isSupabase) {
+      // For Supabase, we need async operations
+      // This is a temporary sync wrapper - ideally the whole chain should be async
+      throw new Error('getNode() with Supabase requires async operations. Use getNodeAsync() instead.');
+    }
+    
     const row = this.db.prepare(`
       SELECT * FROM nodes WHERE node_type = ?
     `).get(nodeType) as any;
     
     if (!row) return null;
     
+    return this.parseNodeRow(row);
+  }
+
+  /**
+   * Async version for Supabase compatibility
+   */
+  async getNodeAsync(nodeType: string): Promise<any> {
+    if (this.isSupabase) {
+      const stmt = this.db.prepare(`SELECT * FROM nodes WHERE node_type = ?`);
+      const row = await (stmt as any).get(nodeType);
+      
+      if (!row) return null;
+      return this.parseNodeRow(row);
+    } else {
+      return this.getNode(nodeType);
+    }
+  }
+
+  private parseNodeRow(row: any): any {
     return {
       nodeType: row.node_type,
       displayName: row.display_name,
@@ -65,10 +94,10 @@ export class NodeRepository {
       category: row.category,
       developmentStyle: row.development_style,
       package: row.package_name,
-      isAITool: Number(row.is_ai_tool) === 1,
-      isTrigger: Number(row.is_trigger) === 1,
-      isWebhook: Number(row.is_webhook) === 1,
-      isVersioned: Number(row.is_versioned) === 1,
+      isAITool: this.isSupabase ? row.is_ai_tool : Number(row.is_ai_tool) === 1,
+      isTrigger: this.isSupabase ? row.is_trigger : Number(row.is_trigger) === 1,
+      isWebhook: this.isSupabase ? row.is_webhook : Number(row.is_webhook) === 1,
+      isVersioned: this.isSupabase ? row.is_versioned : Number(row.is_versioned) === 1,
       version: row.version,
       properties: this.safeJsonParse(row.properties_schema, []),
       operations: this.safeJsonParse(row.operations, []),
@@ -83,6 +112,10 @@ export class NodeRepository {
    * Get AI tools with proper filtering
    */
   getAITools(): any[] {
+    if (this.isSupabase) {
+      throw new Error('getAITools() with Supabase requires async operations. Use getAIToolsAsync() instead.');
+    }
+    
     const rows = this.db.prepare(`
       SELECT node_type, display_name, description, package_name
       FROM nodes 
@@ -96,6 +129,30 @@ export class NodeRepository {
       description: row.description,
       package: row.package_name
     }));
+  }
+
+  /**
+   * Async version for Supabase compatibility
+   */
+  async getAIToolsAsync(): Promise<any[]> {
+    if (this.isSupabase) {
+      const stmt = this.db.prepare(`
+        SELECT node_type, display_name, description, package_name
+        FROM nodes 
+        WHERE is_ai_tool = 1
+        ORDER BY display_name
+      `);
+      const rows = await (stmt as any).all();
+      
+      return rows.map((row: any) => ({
+        nodeType: row.node_type,
+        displayName: row.display_name,
+        description: row.description,
+        package: row.package_name
+      }));
+    } else {
+      return this.getAITools();
+    }
   }
   
   private safeJsonParse(json: string, defaultValue: any): any {

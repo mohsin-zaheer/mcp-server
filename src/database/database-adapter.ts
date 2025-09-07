@@ -43,9 +43,25 @@ export interface ColumnDefinition {
 
 /**
  * Factory function to create a database adapter
- * Tries better-sqlite3 first, falls back to sql.js if needed
+ * Supports SQLite (better-sqlite3, sql.js) and Supabase
  */
 export async function createDatabaseAdapter(dbPath: string): Promise<DatabaseAdapter> {
+  // Check if we should use Supabase
+  if (process.env.USE_SUPABASE === 'true') {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required when USE_SUPABASE=true');
+    }
+    
+    if (process.env.MCP_MODE !== 'stdio') {
+      logger.info('Using Supabase as database backend');
+    }
+    
+    const { createSupabaseAdapter } = await import('./supabase-adapter');
+    return createSupabaseAdapter(supabaseUrl, supabaseKey);
+  }
   // Log Node.js version information
   // Only log in non-stdio mode
   if (process.env.MCP_MODE !== 'stdio') {
