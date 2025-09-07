@@ -27,7 +27,15 @@ export class TemplateRepository {
   
   constructor(private db: DatabaseAdapter) {
     this.sanitizer = new TemplateSanitizer();
-    this.initializeFTS5();
+    // Initialize FTS5 asynchronously - will be called from TemplateService
+    this.hasFTS5Support = false;
+  }
+  
+  /**
+   * Initialize the repository (must be called after construction)
+   */
+  async initialize(): Promise<void> {
+    await this.initializeFTS5();
   }
   
   /**
@@ -189,8 +197,13 @@ export class TemplateRepository {
   /**
    * Search templates by name or description
    */
-  searchTemplates(query: string, limit: number = 20): StoredTemplate[] {
+  async searchTemplates(query: string, limit: number = 20): Promise<StoredTemplate[]> {
     logger.debug(`Searching templates for: "${query}" (FTS5: ${this.hasFTS5Support})`);
+    
+    // For Supabase, use PostgreSQL full-text search
+    if (this.db.constructor.name === 'SupabaseAdapter') {
+      return this.searchTemplatesSupabase(query, limit);
+    }
     
     // If FTS5 is not supported, go straight to LIKE search
     if (!this.hasFTS5Support) {
@@ -225,6 +238,21 @@ export class TemplateRepository {
         ftsQuery: query.split(' ').map(term => `"${term}"`).join(' OR ')
       });
       return this.searchTemplatesLIKE(query, limit);
+    }
+  }
+  
+  /**
+   * Search templates using Supabase PostgreSQL full-text search
+   */
+  private async searchTemplatesSupabase(query: string, limit: number): Promise<StoredTemplate[]> {
+    try {
+      // For now, fall back to LIKE search for Supabase
+      // TODO: Implement proper PostgreSQL full-text search
+      logger.debug('Using LIKE search for Supabase (PostgreSQL FTS not yet implemented)');
+      return this.searchTemplatesLIKE(query, limit);
+    } catch (error: any) {
+      logger.warn('Supabase template search failed:', error);
+      return [];
     }
   }
   
