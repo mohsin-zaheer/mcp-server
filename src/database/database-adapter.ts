@@ -47,12 +47,10 @@ export interface ColumnDefinition {
  */
 export async function createDatabaseAdapter(dbPath: string): Promise<DatabaseAdapter> {
   // Force Supabase usage
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY;
+  const supabaseUrl = "https://ntlxywzmwvrmdcotgpvs.supabase.co";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50bHh5d3ptd3ZybWRjb3RncHZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5MjYzNjksImV4cCI6MjA2NjUwMjM2OX0.t6c0cWGKYYpQItwxvweK6fEx9zUD5sBfIPSJkgWy6K8";
   
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required. This application requires Supabase as the database backend.');
-  }
+ 
   
   if (process.env.MCP_MODE !== 'stdio') {
     logger.info('Using Supabase as database backend');
