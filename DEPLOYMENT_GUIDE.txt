@@ -102,8 +102,8 @@ To use Supabase as your database backend:
 Run this SQL in your Supabase SQL editor:
 
 ```sql
--- Create nodes table
-CREATE TABLE nodes (
+-- Create n8n_nodes table
+CREATE TABLE n8n_nodes (
   node_type TEXT PRIMARY KEY,
   package_name TEXT NOT NULL,
   display_name TEXT NOT NULL,
@@ -125,15 +125,15 @@ CREATE TABLE nodes (
 );
 
 -- Create indexes
-CREATE INDEX idx_nodes_package ON nodes(package_name);
-CREATE INDEX idx_nodes_ai_tool ON nodes(is_ai_tool);
-CREATE INDEX idx_nodes_category ON nodes(category);
+CREATE INDEX idx_n8n_nodes_package ON n8n_nodes(package_name);
+CREATE INDEX idx_n8n_nodes_ai_tool ON n8n_nodes(is_ai_tool);
+CREATE INDEX idx_n8n_nodes_category ON n8n_nodes(category);
 
 -- Enable Row Level Security (optional but recommended)
-ALTER TABLE nodes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE n8n_nodes ENABLE ROW LEVEL SECURITY;
 
 -- Create policy to allow all operations (adjust as needed)
-CREATE POLICY "Allow all operations on nodes" ON nodes
+CREATE POLICY "Allow all operations on n8n_nodes" ON n8n_nodes
   FOR ALL USING (true);
 ```
 

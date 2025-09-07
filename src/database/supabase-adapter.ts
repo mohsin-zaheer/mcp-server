@@ -77,7 +77,14 @@ class SupabasePreparedStatement implements PreparedStatement {
   private extractTableName(sql: string): string {
     // Extract table name from SQL - simplified for common patterns
     const match = sql.match(/(?:FROM|INTO|UPDATE)\s+(\w+)/i);
-    return match ? match[1] : 'nodes';
+    const tableName = match ? match[1] : 'nodes';
+    
+    // Map SQLite table names to Supabase table names
+    if (tableName === 'nodes') {
+      return 'n8n_nodes';
+    }
+    
+    return tableName;
   }
 
   private extractOperation(sql: string): 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'UNKNOWN' {
@@ -200,11 +207,44 @@ class SupabasePreparedStatement implements PreparedStatement {
       return data || [];
     }
     
-    // Default: select all
-    const { data, error } = await this.client
-      .from(this.tableName)
-      .select('*');
+    // Handle COUNT queries
+    if (this.sql.includes('COUNT(*)')) {
+      const { count, error } = await this.client
+        .from(this.tableName)
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) throw error;
+      return [{ count: count || 0 }];
+    }
     
+    // Handle search queries with LIKE
+    if (this.sql.includes('LIKE')) {
+      let query = this.client.from(this.tableName).select('*');
+      
+      // Simple search implementation - can be enhanced
+      if (params.length > 0) {
+        const searchTerm = params[0].replace(/%/g, '');
+        query = query.or(`node_type.ilike.%${searchTerm}%,display_name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    }
+    
+    // Default: select all with optional limit
+    let query = this.client.from(this.tableName).select('*');
+    
+    // Add ordering
+    query = query.order('display_name');
+    
+    // Add limit if specified in SQL
+    const limitMatch = this.sql.match(/LIMIT\s+(\d+)/i);
+    if (limitMatch) {
+      query = query.limit(parseInt(limitMatch[1]));
+    }
+    
+    const { data, error } = await query;
     if (error) throw error;
     return data || [];
   }
@@ -266,9 +306,9 @@ export async function createSupabaseAdapter(supabaseUrl: string, supabaseKey: st
   // Test connection
   try {
     const client = createClient(supabaseUrl, supabaseKey);
-    const { data, error } = await client.from('nodes').select('count', { count: 'exact', head: true });
+    const { data, error } = await client.from('n8n_nodes').select('count', { count: 'exact', head: true });
     
-    if (error && !error.message.includes('relation "nodes" does not exist')) {
+    if (error && !error.message.includes('relation "n8n_nodes" does not exist')) {
       throw error;
     }
     
