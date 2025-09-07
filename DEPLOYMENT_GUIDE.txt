@@ -223,6 +223,7 @@ module.exports = {
     cwd: '/var/www/mcp-server/n8n-mcp',
     instances: 1,
     exec_mode: 'fork',
+    env_file: '.env',
     env: {
       NODE_ENV: 'production'
     },

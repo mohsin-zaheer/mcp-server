@@ -63,6 +63,16 @@ export class N8NDocumentationMCPServer {
   private clientInfo: any = null;
 
   constructor() {
+    // Load environment variables from .env file if not already loaded
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+      try {
+        require('dotenv').config();
+        logger.info('Loaded environment variables from .env file');
+      } catch (error) {
+        logger.warn('Could not load dotenv, using existing environment variables');
+      }
+    }
+    
     // Force Supabase usage
     this.initialized = this.initializeDatabase('supabase');
     
