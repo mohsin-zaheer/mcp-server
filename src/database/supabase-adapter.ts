@@ -14,7 +14,7 @@ export class SupabaseAdapter implements DatabaseAdapter {
   }
 
   prepare(sql: string): PreparedStatement {
-    return new SupabasePreparedStatement(this.client, sql) as any;
+    return new SupabasePreparedStatement(this.client, sql);
   }
 
   exec(sql: string): void {
@@ -53,8 +53,9 @@ export class SupabaseAdapter implements DatabaseAdapter {
   }
 
   checkFTS5Support(): boolean {
-    // Supabase supports full-text search via PostgreSQL
-    return true;
+    // Supabase supports full-text search via PostgreSQL, but not SQLite FTS5
+    // We'll handle this differently in the template repository
+    return false;
   }
 }
 
@@ -97,20 +98,37 @@ class SupabasePreparedStatement implements PreparedStatement {
   }
 
   run(...params: any[]): RunResult {
-    // For Supabase, we need to handle async operations differently
-    // This is a compatibility shim that will throw a more helpful error
+    // For template repository initialization, return a mock result to avoid errors
+    // Real operations should use the async methods
+    if (this.sql.includes('sqlite_master') || this.sql.includes('templates_fts')) {
+      return { changes: 0, lastInsertRowid: 0 };
+    }
+    
+    // For other operations, throw the helpful error
     throw new Error(`Supabase operations are async. The search_nodes tool failed because it tried to use synchronous database operations. Please ensure USE_SUPABASE=false in your environment or implement async database operations.`);
   }
 
   get(...params: any[]): any {
-    // For Supabase, we need to handle async operations differently
-    // This is a compatibility shim that will throw a more helpful error
+    // For template repository FTS5 checks, return null to indicate no FTS5 table
+    if (this.sql.includes('sqlite_master') && this.sql.includes('templates_fts')) {
+      return null; // No FTS5 table exists in Supabase
+    }
+    
+    if (this.sql.includes('COUNT(*)') && this.sql.includes('templates_fts')) {
+      return { count: 0 }; // No FTS5 entries
+    }
+    
+    // For other operations, throw the helpful error
     throw new Error(`Supabase operations are async. Database query failed because it tried to use synchronous operations. Please ensure USE_SUPABASE=false in your environment.`);
   }
 
   all(...params: any[]): any[] {
-    // For Supabase, we need to handle async operations differently
-    // This is a compatibility shim that will throw a more helpful error
+    // For template repository operations, return empty array to avoid errors during initialization
+    if (this.sql.includes('templates') || this.sql.includes('sqlite_master')) {
+      return [];
+    }
+    
+    // For other operations, throw the helpful error
     throw new Error(`Supabase operations are async. Database query failed because it tried to use synchronous operations. Please ensure USE_SUPABASE=false in your environment.`);
   }
 

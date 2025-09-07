@@ -29,6 +29,13 @@ export class TemplateService {
   }
   
   /**
+   * Initialize the service (must be called after construction)
+   */
+  async initialize(): Promise<void> {
+    await this.repository.initialize();
+  }
+  
+  /**
    * List templates that use specific node types
    */
   async listNodeTemplates(nodeTypes: string[], limit: number = 10): Promise<TemplateInfo[]> {
@@ -55,7 +62,7 @@ export class TemplateService {
    * Search templates by query
    */
   async searchTemplates(query: string, limit: number = 20): Promise<TemplateInfo[]> {
-    const templates = this.repository.searchTemplates(query, limit);
+    const templates = await this.repository.searchTemplates(query, limit);
     return templates.map(this.formatTemplateInfo);
   }
   
