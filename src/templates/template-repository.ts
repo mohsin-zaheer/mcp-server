@@ -33,7 +33,14 @@ export class TemplateRepository {
   /**
    * Initialize FTS5 tables if supported
    */
-  private initializeFTS5(): void {
+  private async initializeFTS5(): Promise<void> {
+    // For Supabase, skip FTS5 initialization entirely and use PostgreSQL full-text search
+    if (this.db.constructor.name === 'SupabaseAdapter') {
+      logger.info('Using Supabase (PostgreSQL) - skipping SQLite FTS5 initialization');
+      this.hasFTS5Support = true; // We'll use PostgreSQL full-text search
+      return;
+    }
+    
     this.hasFTS5Support = this.db.checkFTS5Support();
     
     if (this.hasFTS5Support) {
