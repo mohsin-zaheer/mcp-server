@@ -29,6 +29,8 @@ async function main() {
       console.error(`Starting n8n Documentation MCP Server in ${mode} mode...`);
       console.error('Current directory:', process.cwd());
       console.error('Node version:', process.version);
+      console.error('Port:', process.env.PORT || 3001);
+      console.error('Host:', process.env.HOST || '0.0.0.0');
     }
     
     if (mode === 'http') {
