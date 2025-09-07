@@ -144,7 +144,7 @@ REBUILD_ON_START=false
 EOF
 
 # Secure the environment file
-chmod 600 /opt/n8n-mcp/.env
+chmod 600 /var/www/mcp-server/n8n-mcp/.env
 ```
 
 ### Step 4: Process Management with PM2
