@@ -8,11 +8,10 @@ The n8n MCP (Model Context Protocol) Server is a TypeScript-based application th
 ## Table of Contents
 1. [Prerequisites](#prerequisites)
 2. [Local Development Setup](#local-development-setup)
-3. [Docker Deployment (Recommended)](#docker-deployment-recommended)
-4. [Manual Production Deployment](#manual-production-deployment)
-5. [Configuration Options](#configuration-options)
-6. [Troubleshooting](#troubleshooting)
-7. [Security Considerations](#security-considerations)
+3. [Production Deployment](#production-deployment)
+4. [Configuration Options](#configuration-options)
+5. [Troubleshooting](#troubleshooting)
+6. [Security Considerations](#security-considerations)
 
 ---
 
@@ -21,8 +20,6 @@ The n8n MCP (Model Context Protocol) Server is a TypeScript-based application th
 ### System Requirements
 - **Node.js**: Version 22.x (recommended) or 18.x minimum
 - **npm**: Version 8.x or higher
-- **Docker**: Version 20.x or higher (for containerized deployment)
-- **Docker Compose**: Version 2.x or higher (for multi-container setup)
 - **Operating System**: Linux, macOS, or Windows 10/11
 
 ### Hardware Requirements
@@ -89,88 +86,7 @@ ls -la data/nodes.db
 
 ---
 
-## Docker Deployment (Recommended)
-
-### Option A: Using Pre-built Image (Fastest)
-
-#### Step 1: Create Environment File
-```bash
-# Create a .env file for Docker
-cat > .env << 'EOF'
-# Required: Authentication token (generate with: openssl rand -base64 32)
-AUTH_TOKEN=your-secure-32-character-token-here
-
-# Server configuration
-MCP_MODE=http
-USE_FIXED_HTTP=true
-PORT=3001
-NODE_ENV=production
-LOG_LEVEL=info
-
-# Optional: n8n API integration (uncomment to enable 16 additional tools)
-# N8N_API_URL=https://your-n8n-instance.com
-# N8N_API_KEY=your-n8n-api-key
-
-# Database settings
-NODE_DB_PATH=/app/data/nodes.db
-REBUILD_ON_START=false
-EOF
-```
-
-#### Step 2: Generate Secure Token
-```bash
-# Generate a secure authentication token
-openssl rand -base64 32
-
-# Update your .env file with the generated token
-```
-
-#### Step 3: Deploy with Docker Compose
-```bash
-# Start the service
-docker-compose up -d
-
-# Check logs
-docker-compose logs -f n8n-mcp
-
-# Check health
-curl -H "Authorization: Bearer your-token-here" http://localhost:3001/health
-
-# Test the n8n-mcp wrapper command (Docker-specific)
-docker exec n8n-mcp n8n-mcp serve --help
-```
-
-### Option B: Building from Source
-
-#### Step 1: Build the Image
-```bash
-# Build the Docker image
-docker build -t n8n-mcp:local .
-
-# Or use BuildKit for optimized builds
-DOCKER_BUILDKIT=1 docker build -t n8n-mcp:local .
-```
-
-#### Step 2: Run the Container
-```bash
-# Create a data volume
-docker volume create n8n-mcp-data
-
-# Run the container
-docker run -d \
-  --name n8n-mcp \
-  --restart unless-stopped \
-  -p 3001:3001 \
-  -v n8n-mcp-data:/app/data \
-  -e AUTH_TOKEN="your-secure-token-here" \
-  -e MCP_MODE=http \
-  -e USE_FIXED_HTTP=true \
-  n8n-mcp:local
-```
-
----
-
-## Manual Production Deployment
+## Production Deployment
 
 ### Step 1: Server Preparation
 ```bash
@@ -402,14 +318,6 @@ rm -rf node_modules
 npm install
 ```
 
-#### 3. Permission Denied (Docker)
-```bash
-# Symptoms: Permission errors in Docker container
-# Solution: Check volume permissions
-docker-compose down
-docker volume rm n8n-mcp_n8n-mcp-data
-docker-compose up -d
-```
 
 #### 4. Authentication Failures
 ```bash
@@ -440,14 +348,14 @@ curl -H "Authorization: Bearer your-token" http://localhost:3001/health
 
 #### Detailed Status Check
 ```bash
-# Check Docker container status
-docker-compose ps
+# Check PM2 process status
+pm2 status
 
 # Check logs
-docker-compose logs -f n8n-mcp
+pm2 logs n8n-mcp
 
 # Check resource usage
-docker stats n8n-mcp
+pm2 monit
 ```
 
 #### Database Verification
@@ -456,10 +364,7 @@ docker stats n8n-mcp
 ls -la data/nodes.db
 # Expected: File size should be several MB (contains n8n node documentation)
 
-# For Docker deployment, check database inside container
-docker exec n8n-mcp ls -la /app/data/nodes.db
-
-# Test database queries (if built locally)
+# Test database queries
 npm run test-nodes
 
 # Verify database content (should show node count)
@@ -470,23 +375,25 @@ sqlite3 data/nodes.db "SELECT COUNT(*) as node_count FROM nodes;"
 
 #### Memory Usage
 ```bash
-# Monitor memory usage
-docker stats --no-stream n8n-mcp
-
-# Or for PM2 deployment
+# Monitor memory usage with PM2
 pm2 monit
+
+# Or use system tools
+htop
+# Or
+ps aux | grep n8n-mcp
 ```
 
 #### Log Analysis
 ```bash
 # View recent logs
-docker-compose logs --tail=100 n8n-mcp
+pm2 logs n8n-mcp --lines 100
 
 # Search for errors
-docker-compose logs n8n-mcp | grep -i error
+pm2 logs n8n-mcp | grep -i error
 
 # Monitor real-time logs
-docker-compose logs -f n8n-mcp
+pm2 logs n8n-mcp -f
 ```
 
 ---
@@ -504,13 +411,12 @@ docker-compose logs -f n8n-mcp
 - Configure `TRUST_PROXY` correctly when behind a reverse proxy
 - Use firewall rules to restrict access to necessary ports only
 
-### Container Security
-- The Docker image runs as non-root user with unpredictable UID/GID
-- Includes security wrapper script (`docker/n8n-mcp`) that validates arguments
-- Use Docker secrets for sensitive environment variables
-- Regularly update the base image and dependencies
-- Scan images for vulnerabilities
-- The wrapper script prevents command injection by validating allowed arguments
+### Application Security
+- Run the application as a non-root user (n8n-mcp)
+- Set restrictive file permissions on configuration files
+- Use environment variables for sensitive configuration
+- Regularly update Node.js and dependencies
+- Monitor for security vulnerabilities
 
 ### Data Protection
 - Database contains n8n node documentation (no sensitive user data)
@@ -599,9 +505,8 @@ npm install
 npm run build
 npm run rebuild
 
-# For Docker deployment
-docker-compose pull
-docker-compose up -d
+# Restart the application
+pm2 restart n8n-mcp
 ```
 
 ### Database Maintenance
@@ -615,17 +520,17 @@ npm run db:rebuild
 
 ### Backup and Recovery
 ```bash
-# Backup database (Docker)
-docker cp n8n-mcp:/app/data/nodes.db ./backup-nodes.db
+# Backup database
+cp /opt/n8n-mcp/data/nodes.db ./backup-nodes.db
 
-# Restore database (Docker)
-docker cp ./backup-nodes.db n8n-mcp:/app/data/nodes.db
-docker-compose restart n8n-mcp
+# Restore database
+cp ./backup-nodes.db /opt/n8n-mcp/data/nodes.db
+pm2 restart n8n-mcp
 
 # Note: The database can be rebuilt from scratch if lost
 # It contains n8n node documentation that can be regenerated
-npm run rebuild  # For local installations
-# Or set REBUILD_ON_START=true in Docker environment
+npm run rebuild
+# Or set REBUILD_ON_START=true in environment
 ```
 
 ---
@@ -645,7 +550,6 @@ npm run rebuild  # For local installations
 ### Version Information
 - Current Version: 2.10.8
 - Node.js Compatibility: 18.x, 20.x, 22.x
-- Docker Image: ghcr.io/czlonkowski/n8n-mcp:latest
 
 ---
 
