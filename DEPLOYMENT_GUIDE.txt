@@ -1,0 +1,653 @@
+# n8n MCP Server - Complete Deployment Guide
+
+## Overview
+The n8n MCP (Model Context Protocol) Server is a TypeScript-based application that provides documentation and tooling for n8n workflows. It can run in two modes:
+- **STDIO Mode**: For local Claude Desktop integration
+- **HTTP Mode**: For remote deployment and web-based access
+
+## Table of Contents
+1. [Prerequisites](#prerequisites)
+2. [Local Development Setup](#local-development-setup)
+3. [Docker Deployment (Recommended)](#docker-deployment-recommended)
+4. [Manual Production Deployment](#manual-production-deployment)
+5. [Configuration Options](#configuration-options)
+6. [Troubleshooting](#troubleshooting)
+7. [Security Considerations](#security-considerations)
+
+---
+
+## Prerequisites
+
+### System Requirements
+- **Node.js**: Version 22.x (recommended) or 18.x minimum
+- **npm**: Version 8.x or higher
+- **Docker**: Version 20.x or higher (for containerized deployment)
+- **Docker Compose**: Version 2.x or higher (for multi-container setup)
+- **Operating System**: Linux, macOS, or Windows 10/11
+
+### Hardware Requirements
+- **Memory**: Minimum 512MB RAM, recommended 1GB+
+- **Storage**: Minimum 500MB free space
+- **CPU**: Any modern x64 or ARM64 processor
+
+---
+
+## Local Development Setup
+
+### Step 1: Clone and Install Dependencies
+```bash
+# Clone the repository
+git clone https://github.com/czlonkowski/n8n-mcp.git
+cd n8n-mcp
+
+# Install dependencies
+npm install
+
+# Build the TypeScript code
+npm run build
+
+# Initialize the database
+npm run rebuild
+```
+
+### Step 2: Configure Environment
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit the .env file with your preferred settings
+# For local development, the defaults are usually fine
+```
+
+### Step 3: Run in Development Mode
+```bash
+# For STDIO mode (Claude Desktop integration)
+npm run start
+
+# For HTTP mode (web access)
+npm run start:http:fixed
+
+# For development with auto-reload
+npm run dev
+```
+
+### Step 4: Verify Installation
+```bash
+# Test the build
+npm run validate
+
+# Run tests (optional)
+npm test
+
+# Test specific functionality
+npm run test-nodes
+
+# Verify database exists and has data
+ls -la data/nodes.db
+# Should show a file of several MB in size
+```
+
+---
+
+## Docker Deployment (Recommended)
+
+### Option A: Using Pre-built Image (Fastest)
+
+#### Step 1: Create Environment File
+```bash
+# Create a .env file for Docker
+cat > .env << 'EOF'
+# Required: Authentication token (generate with: openssl rand -base64 32)
+AUTH_TOKEN=your-secure-32-character-token-here
+
+# Server configuration
+MCP_MODE=http
+USE_FIXED_HTTP=true
+PORT=3000
+NODE_ENV=production
+LOG_LEVEL=info
+
+# Optional: n8n API integration (uncomment to enable 16 additional tools)
+# N8N_API_URL=https://your-n8n-instance.com
+# N8N_API_KEY=your-n8n-api-key
+
+# Database settings
+NODE_DB_PATH=/app/data/nodes.db
+REBUILD_ON_START=false
+EOF
+```
+
+#### Step 2: Generate Secure Token
+```bash
+# Generate a secure authentication token
+openssl rand -base64 32
+
+# Update your .env file with the generated token
+```
+
+#### Step 3: Deploy with Docker Compose
+```bash
+# Start the service
+docker-compose up -d
+
+# Check logs
+docker-compose logs -f n8n-mcp
+
+# Check health
+curl -H "Authorization: Bearer your-token-here" http://localhost:3000/health
+
+# Test the n8n-mcp wrapper command (Docker-specific)
+docker exec n8n-mcp n8n-mcp serve --help
+```
+
+### Option B: Building from Source
+
+#### Step 1: Build the Image
+```bash
+# Build the Docker image
+docker build -t n8n-mcp:local .
+
+# Or use BuildKit for optimized builds
+DOCKER_BUILDKIT=1 docker build -t n8n-mcp:local .
+```
+
+#### Step 2: Run the Container
+```bash
+# Create a data volume
+docker volume create n8n-mcp-data
+
+# Run the container
+docker run -d \
+  --name n8n-mcp \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  -v n8n-mcp-data:/app/data \
+  -e AUTH_TOKEN="your-secure-token-here" \
+  -e MCP_MODE=http \
+  -e USE_FIXED_HTTP=true \
+  n8n-mcp:local
+```
+
+---
+
+## Manual Production Deployment
+
+### Step 1: Server Preparation
+```bash
+# Update system packages (Ubuntu/Debian)
+sudo apt update && sudo apt upgrade -y
+
+# Install Node.js 22.x
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install PM2 for process management
+sudo npm install -g pm2
+
+# Create application user
+sudo useradd -m -s /bin/bash n8n-mcp
+sudo mkdir -p /opt/n8n-mcp
+sudo chown n8n-mcp:n8n-mcp /opt/n8n-mcp
+```
+
+### Step 2: Application Deployment
+```bash
+# Switch to application user
+sudo su - n8n-mcp
+
+# Clone and build application
+cd /opt/n8n-mcp
+git clone https://github.com/czlonkowski/n8n-mcp.git .
+npm install --production
+npm run build
+npm run rebuild
+```
+
+### Step 3: Configure Environment
+```bash
+# Create production environment file
+cat > /opt/n8n-mcp/.env << 'EOF'
+NODE_ENV=production
+MCP_MODE=http
+USE_FIXED_HTTP=true
+PORT=3000
+HOST=0.0.0.0
+AUTH_TOKEN=your-secure-token-here
+LOG_LEVEL=info
+NODE_DB_PATH=/opt/n8n-mcp/data/nodes.db
+REBUILD_ON_START=false
+
+# Optional: Reverse proxy configuration
+# BASE_URL=https://n8n-mcp.yourdomain.com
+# TRUST_PROXY=1
+# CORS_ORIGIN=https://your-client-domain.com
+
+# Optional: n8n API integration
+# N8N_API_URL=https://your-n8n-instance.com
+# N8N_API_KEY=your-n8n-api-key
+EOF
+
+# Secure the environment file
+chmod 600 /opt/n8n-mcp/.env
+```
+
+### Step 4: Process Management with PM2
+```bash
+# Create PM2 ecosystem file
+cat > /opt/n8n-mcp/ecosystem.config.js << 'EOF'
+module.exports = {
+  apps: [{
+    name: 'n8n-mcp',
+    script: 'dist/mcp/index.js',
+    cwd: '/opt/n8n-mcp',
+    instances: 1,
+    exec_mode: 'fork',
+    env: {
+      NODE_ENV: 'production'
+    },
+    error_file: '/var/log/n8n-mcp/error.log',
+    out_file: '/var/log/n8n-mcp/out.log',
+    log_file: '/var/log/n8n-mcp/combined.log',
+    time: true,
+    max_memory_restart: '512M',
+    restart_delay: 4000,
+    max_restarts: 10,
+    min_uptime: '10s'
+  }]
+};
+EOF
+
+# Create log directory
+sudo mkdir -p /var/log/n8n-mcp
+sudo chown n8n-mcp:n8n-mcp /var/log/n8n-mcp
+
+# Start the application
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup
+```
+
+### Step 5: Reverse Proxy Setup (Nginx)
+```bash
+# Install Nginx
+sudo apt install nginx -y
+
+# Create Nginx configuration
+sudo tee /etc/nginx/sites-available/n8n-mcp << 'EOF'
+server {
+    listen 80;
+    server_name n8n-mcp.yourdomain.com;
+
+    # Security headers
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+
+    # Rate limiting
+    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+    limit_req zone=api burst=20 nodelay;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 86400;
+    }
+}
+EOF
+
+# Enable the site
+sudo ln -s /etc/nginx/sites-available/n8n-mcp /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### Step 6: SSL Certificate (Let's Encrypt)
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx -y
+
+# Obtain SSL certificate
+sudo certbot --nginx -d n8n-mcp.yourdomain.com
+
+# Test automatic renewal
+sudo certbot renew --dry-run
+```
+
+---
+
+## Configuration Options
+
+### Environment Variables
+
+#### Core Configuration
+- `MCP_MODE`: Server mode (`stdio` for local, `http` for remote)
+- `USE_FIXED_HTTP`: Use stable HTTP implementation (`true` recommended)
+- `PORT`: HTTP server port (default: 3000)
+- `HOST`: Bind address (default: 0.0.0.0 for HTTP mode)
+- `NODE_ENV`: Environment (`development`, `production`)
+- `LOG_LEVEL`: Logging level (`debug`, `info`, `warn`, `error`)
+
+#### Database Configuration
+- `NODE_DB_PATH`: Path to SQLite database file
+- `REBUILD_ON_START`: Rebuild database on startup (`true`/`false`)
+
+#### Security Configuration
+- `AUTH_TOKEN`: Required authentication token for HTTP mode
+- `CORS_ORIGIN`: Allowed CORS origins (default: `*`)
+- `TRUST_PROXY`: Trust proxy headers for IP logging (0=disabled, 1=enabled)
+- `BASE_URL`: Base URL for the server (auto-detected if not set)
+
+#### n8n API Integration (Optional)
+- `N8N_API_URL`: Your n8n instance URL
+- `N8N_API_KEY`: n8n API key
+- `N8N_API_TIMEOUT`: API request timeout (default: 30000ms)
+- `N8N_API_MAX_RETRIES`: Max API retry attempts (default: 3)
+
+### Available Scripts
+```bash
+# Build and development
+npm run build          # Compile TypeScript
+npm run rebuild        # Rebuild database
+npm run dev           # Development mode with rebuild
+npm run validate      # Validate installation
+
+# Server modes
+npm run start         # STDIO mode
+npm run start:http    # HTTP mode
+npm run http          # Build + HTTP mode
+
+# Testing
+npm test              # Run all tests
+npm run test:unit     # Unit tests only
+npm run test:integration  # Integration tests
+npm run test:coverage # Coverage report
+
+# Database operations
+npm run db:rebuild    # Rebuild database
+npm run migrate:fts5  # Migrate to FTS5 search
+
+# Utilities
+npm run fetch:templates    # Fetch workflow templates
+npm run sanitize:templates # Clean template data
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### 1. Database Not Found Error
+```bash
+# Symptoms: "nodes.db not found" error
+# Solution:
+npm run build
+npm run rebuild
+```
+
+#### 2. Node.js Version Mismatch
+```bash
+# Symptoms: "NODE_MODULE_VERSION" error
+# Solution:
+npm rebuild better-sqlite3
+# Or if that fails:
+rm -rf node_modules
+npm install
+```
+
+#### 3. Permission Denied (Docker)
+```bash
+# Symptoms: Permission errors in Docker container
+# Solution: Check volume permissions
+docker-compose down
+docker volume rm n8n-mcp_n8n-mcp-data
+docker-compose up -d
+```
+
+#### 4. Authentication Failures
+```bash
+# Symptoms: 401 Unauthorized errors
+# Solution: Verify AUTH_TOKEN is set correctly
+echo $AUTH_TOKEN
+# Test with curl:
+curl -H "Authorization: Bearer $AUTH_TOKEN" http://localhost:3000/health
+```
+
+#### 5. Port Already in Use
+```bash
+# Symptoms: "EADDRINUSE" error
+# Solution: Change port or kill existing process
+lsof -ti:3000 | xargs kill -9
+# Or change PORT in .env file
+```
+
+### Health Checks
+
+#### Basic Health Check
+```bash
+# For HTTP mode
+curl -H "Authorization: Bearer your-token" http://localhost:3000/health
+
+# Expected response: {"status":"ok","timestamp":"..."}
+```
+
+#### Detailed Status Check
+```bash
+# Check Docker container status
+docker-compose ps
+
+# Check logs
+docker-compose logs -f n8n-mcp
+
+# Check resource usage
+docker stats n8n-mcp
+```
+
+#### Database Verification
+```bash
+# Verify database exists and is readable
+ls -la data/nodes.db
+# Expected: File size should be several MB (contains n8n node documentation)
+
+# For Docker deployment, check database inside container
+docker exec n8n-mcp ls -la /app/data/nodes.db
+
+# Test database queries (if built locally)
+npm run test-nodes
+
+# Verify database content (should show node count)
+sqlite3 data/nodes.db "SELECT COUNT(*) as node_count FROM nodes;"
+```
+
+### Performance Monitoring
+
+#### Memory Usage
+```bash
+# Monitor memory usage
+docker stats --no-stream n8n-mcp
+
+# Or for PM2 deployment
+pm2 monit
+```
+
+#### Log Analysis
+```bash
+# View recent logs
+docker-compose logs --tail=100 n8n-mcp
+
+# Search for errors
+docker-compose logs n8n-mcp | grep -i error
+
+# Monitor real-time logs
+docker-compose logs -f n8n-mcp
+```
+
+---
+
+## Security Considerations
+
+### Authentication
+- **Always** set a strong `AUTH_TOKEN` for HTTP mode
+- Use `openssl rand -base64 32` to generate secure tokens
+- Rotate tokens regularly in production
+
+### Network Security
+- Use HTTPS in production (configure reverse proxy with SSL)
+- Set appropriate `CORS_ORIGIN` (avoid `*` in production)
+- Configure `TRUST_PROXY` correctly when behind a reverse proxy
+- Use firewall rules to restrict access to necessary ports only
+
+### Container Security
+- The Docker image runs as non-root user with unpredictable UID/GID
+- Includes security wrapper script (`docker/n8n-mcp`) that validates arguments
+- Use Docker secrets for sensitive environment variables
+- Regularly update the base image and dependencies
+- Scan images for vulnerabilities
+- The wrapper script prevents command injection by validating allowed arguments
+
+### Data Protection
+- Database contains n8n node documentation (no sensitive user data)
+- Ensure proper file permissions on database file (600)
+- Regular backups of the database volume (optional, can be rebuilt)
+
+### Production Hardening
+```bash
+# Set restrictive file permissions
+chmod 600 .env
+chmod 755 dist/
+
+# Use systemd for process management instead of PM2 (optional)
+sudo systemctl enable n8n-mcp
+sudo systemctl start n8n-mcp
+
+# Configure log rotation
+sudo tee /etc/logrotate.d/n8n-mcp << 'EOF'
+/var/log/n8n-mcp/*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    notifempty
+    create 644 n8n-mcp n8n-mcp
+    postrotate
+        pm2 reloadLogs
+    endscript
+}
+EOF
+```
+
+---
+
+## Integration Examples
+
+### Claude Desktop Integration (STDIO Mode)
+Add to your Claude Desktop config:
+```json
+{
+  "mcpServers": {
+    "n8n-mcp": {
+      "command": "node",
+      "args": ["/path/to/n8n-mcp/dist/mcp/index.js"],
+      "env": {
+        "MCP_MODE": "stdio"
+      }
+    }
+  }
+}
+```
+
+### HTTP Client Integration
+```javascript
+// Example HTTP client usage
+const response = await fetch('http://localhost:3000/mcp', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer your-auth-token'
+  },
+  body: JSON.stringify({
+    jsonrpc: '2.0',
+    method: 'tools/list',
+    id: 1
+  })
+});
+```
+
+### n8n Workflow Integration
+When `N8N_API_URL` and `N8N_API_KEY` are configured, you get 16 additional tools:
+- Workflow management (create, update, delete)
+- Execution management (start, stop, monitor)
+- Template operations (import, export)
+- Validation and testing tools
+
+---
+
+## Maintenance
+
+### Regular Updates
+```bash
+# Update to latest version
+git pull origin main
+npm install
+npm run build
+npm run rebuild
+
+# For Docker deployment
+docker-compose pull
+docker-compose up -d
+```
+
+### Database Maintenance
+```bash
+# Rebuild database with latest n8n nodes
+npm run rebuild
+
+# Optimize database (optional)
+npm run db:rebuild
+```
+
+### Backup and Recovery
+```bash
+# Backup database (Docker)
+docker cp n8n-mcp:/app/data/nodes.db ./backup-nodes.db
+
+# Restore database (Docker)
+docker cp ./backup-nodes.db n8n-mcp:/app/data/nodes.db
+docker-compose restart n8n-mcp
+
+# Note: The database can be rebuilt from scratch if lost
+# It contains n8n node documentation that can be regenerated
+npm run rebuild  # For local installations
+# Or set REBUILD_ON_START=true in Docker environment
+```
+
+---
+
+## Support and Resources
+
+### Documentation
+- GitHub Repository: https://github.com/czlonkowski/n8n-mcp
+- Issues and Bug Reports: https://github.com/czlonkowski/n8n-mcp/issues
+- Model Context Protocol: https://modelcontextprotocol.io/
+
+### Community
+- Report issues on GitHub
+- Check existing issues before creating new ones
+- Provide detailed error logs and environment information
+
+### Version Information
+- Current Version: 2.10.8
+- Node.js Compatibility: 18.x, 20.x, 22.x
+- Docker Image: ghcr.io/czlonkowski/n8n-mcp:latest
+
+---
+
+*Last Updated: 2025-09-07*
+*Guide Version: 1.0*
