@@ -131,7 +131,7 @@ HOST=0.0.0.0
 AUTH_TOKEN=your-secure-token-here
 LOG_LEVEL=info
 NODE_DB_PATH=/var/www/mcp-server/n8n-mcp/data/nodes.db
-REBUILD_ON_START=false
+REBUILD_ON_START=true
 
 # Optional: Reverse proxy configuration
 # BASE_URL=https://n8n-mcp.yourdomain.com
@@ -306,6 +306,22 @@ npm run sanitize:templates # Clean template data
 # Solution:
 npm run build
 npm run rebuild
+```
+
+#### 2. Database Table Missing Error
+```bash
+# Symptoms: "no such table: nodes" error
+# Solution: Rebuild the database
+cd /var/www/mcp-server/n8n-mcp
+npm run rebuild
+
+# Or set REBUILD_ON_START=true in .env and restart
+echo "REBUILD_ON_START=true" >> .env
+pm2 restart n8n-mcp
+
+# Verify database was created
+ls -la data/nodes.db
+sqlite3 data/nodes.db "SELECT COUNT(*) FROM nodes;"
 ```
 
 #### 2. Node.js Version Mismatch
