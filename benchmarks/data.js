@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1757278037424,
+  "lastUpdate": 1757278474144,
   "repoUrl": "https://github.com/mohsin-zaheer/mcp-server",
   "entries": {
     "n8n-mcp Benchmarks": [
@@ -52,6 +52,58 @@ window.BENCHMARK_DATA = {
             "range": "0.4349",
             "unit": "ms",
             "extra": "14841 ops/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mohsinzaheerbabar@gmail.com",
+            "name": "Mohsin Zaheer",
+            "username": "mohsin-zaheer"
+          },
+          "committer": {
+            "email": "mohsinzaheerbabar@gmail.com",
+            "name": "Mohsin Zaheer",
+            "username": "mohsin-zaheer"
+          },
+          "distinct": true,
+          "id": "9db0ffefb7ac0967ae19b356a7502d7b80bd4afa",
+          "message": "feat: force Supabase usage and remove SQLite fallback logic\n\nCo-authored-by: aider (anthropic/claude-sonnet-4-20250514) <aider@aider.chat>",
+          "timestamp": "2025-09-08T01:52:17+05:00",
+          "tree_id": "df3b621dcefb8e40aba8011213e3641fa3d75ce8",
+          "url": "https://github.com/mohsin-zaheer/mcp-server/commit/9db0ffefb7ac0967ae19b356a7502d7b80bd4afa"
+        },
+        "date": 1757278473863,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "sample - array sorting - small",
+            "value": 0.0189,
+            "range": "0.22959999999999997",
+            "unit": "ms",
+            "extra": "52983 ops/sec"
+          },
+          {
+            "name": "sample - array sorting - large",
+            "value": 3.1325,
+            "range": "0.4817",
+            "unit": "ms",
+            "extra": "319 ops/sec"
+          },
+          {
+            "name": "sample - string concatenation",
+            "value": 0.0048,
+            "range": "0.24630000000000002",
+            "unit": "ms",
+            "extra": "207184 ops/sec"
+          },
+          {
+            "name": "sample - object creation",
+            "value": 0.0658,
+            "range": "0.2912",
+            "unit": "ms",
+            "extra": "15198 ops/sec"
           }
         ]
       }
